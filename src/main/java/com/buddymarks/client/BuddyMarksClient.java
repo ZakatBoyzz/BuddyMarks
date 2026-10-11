@@ -1,4 +1,3 @@
-```java
 package com.buddymarks.client;
 
 import com.buddymarks.BuddyMarksMod;
