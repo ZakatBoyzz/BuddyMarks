@@ -238,16 +238,14 @@ public final class BuddyMarksClient implements ClientModInitializer {
         ClientState.send(request);
     }
 
-```
-public static void notifyText(String text) {
-    MinecraftClient client = MinecraftClient.getInstance();
+    public static void notifyText(String text) {
+        MinecraftClient client = MinecraftClient.getInstance();
 
-    if (client.player != null) {
-        client.player.sendMessage(
-                Text.literal("[BuddyMarks] " + text),
-                false
-        );
+        if (client.player != null) {
+            client.player.sendMessage(
+                    Text.literal("[BuddyMarks] " + text),
+                    false
+            );
+        }
     }
-}
-
 }
