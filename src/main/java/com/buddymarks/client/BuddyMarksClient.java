@@ -237,6 +237,36 @@ public final class BuddyMarksClient implements ClientModInitializer {
         ClientState.send(request);
     }
 
+    public static Vec3d markerPositionFromLook(MinecraftClient client) {
+        if (client.crosshairTarget instanceof BlockHitResult hit
+                && client.crosshairTarget.getType() == HitResult.Type.BLOCK) {
+            return Vec3d.ofCenter(hit.getBlockPos());
+        }
+
+        if (client.player != null) {
+            return client.player.getPos().add(
+                    client.player.getRotationVec(1.0F).multiply(5.0)
+            );
+        }
+
+        return Vec3d.ZERO;
+    }
+    private static void createTemporaryMarker(MinecraftClient client) {
+        if (client.player == null) {
+            return;
+        }
+
+        Vec3d position = markerPositionFromLook(client);
+        JsonObject request = ClientState.message("marker_temp");
+        request.addProperty("x", position.x);
+        request.addProperty("y", position.y);
+        request.addProperty("z", position.z);
+        request.addProperty("duration", ClientConfig.INSTANCE.temporaryMarkerSeconds);
+        request.addProperty("color", ClientConfig.INSTANCE.temporaryMarkerColor);
+        request.addProperty("size", ClientConfig.INSTANCE.markerSize);
+
+        ClientState.send(request);
+    }
     public static void notifyText(String text) {
         MinecraftClient client = MinecraftClient.getInstance();
 
