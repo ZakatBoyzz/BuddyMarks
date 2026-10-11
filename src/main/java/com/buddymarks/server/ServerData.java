@@ -342,7 +342,7 @@ public final class ServerData {
         double y = number(request, "y", player.getY());
         double z = number(request, "z", player.getZ());
         if (!Double.isFinite(x) || !Double.isFinite(y) || !Double.isFinite(z)
-                || y < player.getWorld().getBottomY() - 64 || y > player.getWorld().getTopY() + 64
+            || y < -64 || y > 384
                 || new Vec3d(x, y, z).squaredDistanceTo(player.getPos()) > 256.0 * 256.0) {
             notice(player, "Недопустимая координата метки (максимум 256 блоков от тебя)."); return;
         }
