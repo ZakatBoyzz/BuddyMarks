@@ -238,49 +238,16 @@ public final class BuddyMarksClient implements ClientModInitializer {
         ClientState.send(request);
     }
 
-    public static void createTemporaryMarker(MinecraftClient client) {
-        if (client.player == null || client.world == null) {
-            return;
-        }
+```
+public static void notifyText(String text) {
+    MinecraftClient client = MinecraftClient.getInstance();
 
-        Vec3d pos;
-
-        if (client.crosshairTarget instanceof BlockHitResult hit
-                && hit.getType() == HitResult.Type.BLOCK) {
-            pos = hit.getPos();
-        } else {
-            pos = client.player.getPos();
-        }
-
-        JsonObject request = ClientState.message("marker_temp");
-        request.addProperty("x", pos.x);
-        request.addProperty("y", pos.y);
-        request.addProperty("z", pos.z);
-        request.addProperty("duration", ClientConfig.INSTANCE.temporaryMarkerSeconds);
-        request.addProperty("color", ClientConfig.INSTANCE.temporaryMarkerColor);
-
-        ClientState.send(request);
+    if (client.player != null) {
+        client.player.sendMessage(
+                Text.literal("[BuddyMarks] " + text),
+                false
+        );
     }
+}
 
-    public static Vec3d markerPositionFromLook(MinecraftClient client) {
-        if (client.player == null) {
-            return Vec3d.ZERO;
-        }
-
-        if (client.crosshairTarget instanceof BlockHitResult hit
-                && hit.getType() == HitResult.Type.BLOCK) {
-            return hit.getPos();
-        }
-
-        return client.player.getPos();
-    }
-
-    public static void notifyText(String text) {
-        MinecraftClient client = MinecraftClient.getInstance();
-
-        if (client.player != null) {
-            client.player.sendMessage(
-                    Text.literal("[BuddyMarks] " + text),
-                    false        }
-    }
 }
