@@ -20,14 +20,15 @@ import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.option.KeyBinding;
 import net.minecraft.client.util.InputUtil;
 import net.minecraft.entity.player.PlayerEntity;
+import net.minecraft.text.Text;
 import net.minecraft.util.ActionResult;
 import net.minecraft.util.hit.BlockHitResult;
 import net.minecraft.util.hit.HitResult;
 import net.minecraft.util.math.Vec3d;
-import net.minecraft.text.Text;
 import org.lwjgl.glfw.GLFW;
 
 public final class BuddyMarksClient implements ClientModInitializer {
+
     private static KeyBinding openMenuKey;
     private static KeyBinding temporaryMarkerKey;
     private static KeyBinding mainMarkerKey;
@@ -36,59 +37,82 @@ public final class BuddyMarksClient implements ClientModInitializer {
     public void onInitializeClient() {
         ClientConfig.load();
 
-        openMenuKey = KeyBindingHelper.registerKeyBinding(new KeyBinding(
-                "key.buddymarks.open_menu",
-                InputUtil.Type.KEYSYM,
-                GLFW.GLFW_KEY_O,
-                "category.buddymarks"
-        ));
-
-        temporaryMarkerKey = KeyBindingHelper.registerKeyBinding(new KeyBinding(
-                "key.buddymarks.temporary_marker",
-                InputUtil.Type.KEYSYM,
-                GLFW.GLFW_KEY_B,
-                "category.buddymarks"
-        ));
-
-        mainMarkerKey = KeyBindingHelper.registerKeyBinding(new KeyBinding(
-                "key.buddymarks.main_marker",
-                InputUtil.Type.KEYSYM,
-                GLFW.GLFW_KEY_N,
-                "category.buddymarks"
-        ));
-
-        ClientPlayNetworking.registerGlobalReceiver(WirePayload.ID, (payload, context) ->
-                context.client().execute(() -> ClientState.handle(payload.json()))
+        openMenuKey = KeyBindingHelper.registerKeyBinding(
+                new KeyBinding(
+                        "key.buddymarks.open_menu",
+                        InputUtil.Type.KEYSYM,
+                        GLFW.GLFW_KEY_O,
+                        "category.buddymarks"
+                )
         );
 
-        ClientPlayConnectionEvents.JOIN.register((handler, sender, client) -> {
-            ClientState.serverHasMod = false;
-            ClientState.resetServerTimeOffset();
-            ClientState.FRIENDS.clear();
-            ClientState.MARKERS.clear();
+        temporaryMarkerKey = KeyBindingHelper.registerKeyBinding(
+                new KeyBinding(
+                        "key.buddymarks.temporary_marker",
+                        InputUtil.Type.KEYSYM,
+                        GLFW.GLFW_KEY_B,
+                        "category.buddymarks"
+                )
+        );
 
-            if (ClientPlayNetworking.canSend(WirePayload.ID)) {
-                ClientState.send(ClientState.message("hello"));
-            } else if (client.player != null) {
-                client.player.sendMessage(
-                        Text.literal("[BuddyMarks] На сервере нет BuddyMarks: общие друзья и метки работать не будут."),
-                        false
-                );
-            }
-        });
+        mainMarkerKey = KeyBindingHelper.registerKeyBinding(
+                new KeyBinding(
+                        "key.buddymarks.main_marker",
+                        InputUtil.Type.KEYSYM,
+                        GLFW.GLFW_KEY_N,
+                        "category.buddymarks"
+                )
+        );
 
-        ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> {
-            ClientState.serverHasMod = false;
-            ClientState.resetServerTimeOffset();
-            ClientState.FRIENDS.clear();
-            ClientState.MARKERS.clear();
-        });
+        // Получение сообщений от сервера.
+        ClientPlayNetworking.registerGlobalReceiver(
+                WirePayload.ID,
+                (payload, context) ->
+                        context.client().execute(
+                                () -> ClientState.handle(payload.json())
+                        )
+        );
 
+        // Подключение к серверу.
+        ClientPlayConnectionEvents.JOIN.register(
+                (handler, sender, client) -> {
+                    ClientState.serverHasMod = false;
+                    ClientState.resetServerTimeOffset();
+                    ClientState.FRIENDS.clear();
+                    ClientState.MARKERS.clear();
+
+                    if (ClientPlayNetworking.canSend(WirePayload.ID)) {
+                        ClientState.send(ClientState.message("hello"));
+                    } else if (client.player != null) {
+                        client.player.sendMessage(
+                                Text.literal(
+                                        "[BuddyMarks] На сервере нет BuddyMarks: "
+                                                + "общие друзья и метки работать не будут."
+                                ),
+                                false
+                        );
+                    }
+                }
+        );
+
+        // Отключение от сервера.
+        ClientPlayConnectionEvents.DISCONNECT.register(
+                (handler, client) -> {
+                    ClientState.serverHasMod = false;
+                    ClientState.resetServerTimeOffset();
+                    ClientState.FRIENDS.clear();
+                    ClientState.MARKERS.clear();
+                }
+        );
+
+        // Команды друзей через чат с точкой.
         ClientSendMessageEvents.ALLOW_CHAT.register(message -> {
             String trimmed = message.trim();
 
             if (!(trimmed.equalsIgnoreCase(".friend")
-                    || trimmed.regionMatches(true, 0, ".friend ", 0, 8))) {
+                    || trimmed.regionMatches(
+                            true, 0, ".friend ", 0, 8
+                    ))) {
                 return true;
             }
 
@@ -96,77 +120,118 @@ public final class BuddyMarksClient implements ClientModInitializer {
             return false;
         });
 
-        ClientCommandRegistrationCallback.EVENT.register((dispatcher, registryAccess) ->
-                dispatcher.register(
-                        ClientCommandManager.literal("friend")
-                                .then(ClientCommandManager.literal("add")
-                                        .then(ClientCommandManager.argument("name", StringArgumentType.word())
-                                                .executes(context -> {
+        // Обычные команды /friend.
+        ClientCommandRegistrationCallback.EVENT.register(
+                (dispatcher, registryAccess) ->
+                        dispatcher.register(
+                                ClientCommandManager.literal("friend")
+
+                                        .then(ClientCommandManager.literal("add")
+                                                .then(ClientCommandManager.argument(
+                                                        "name",
+                                                        StringArgumentType.word()
+                                                ).executes(context -> {
                                                     sendFriendAction(
                                                             "friend_add",
-                                                            StringArgumentType.getString(context, "name")
+                                                            StringArgumentType.getString(
+                                                                    context, "name"
+                                                            )
                                                     );
                                                     return 1;
                                                 })))
-                                .then(ClientCommandManager.literal("remove")
-                                        .then(ClientCommandManager.argument("name", StringArgumentType.word())
-                                                .executes(context -> {
+
+                                        .then(ClientCommandManager.literal("remove")
+                                                .then(ClientCommandManager.argument(
+                                                        "name",
+                                                        StringArgumentType.word()
+                                                ).executes(context -> {
                                                     sendFriendAction(
                                                             "friend_remove",
-                                                            StringArgumentType.getString(context, "name")
+                                                            StringArgumentType.getString(
+                                                                    context, "name"
+                                                            )
                                                     );
                                                     return 1;
                                                 })))
-                                .then(ClientCommandManager.literal("accept")
-                                        .then(ClientCommandManager.argument("name", StringArgumentType.word())
-                                                .executes(context -> {
+
+                                        .then(ClientCommandManager.literal("accept")
+                                                .then(ClientCommandManager.argument(
+                                                        "name",
+                                                        StringArgumentType.word()
+                                                ).executes(context -> {
                                                     sendFriendAction(
                                                             "friend_accept",
-                                                            StringArgumentType.getString(context, "name")
+                                                            StringArgumentType.getString(
+                                                                    context, "name"
+                                                            )
                                                     );
                                                     return 1;
                                                 })))
-                                .then(ClientCommandManager.literal("deny")
-                                        .then(ClientCommandManager.argument("name", StringArgumentType.word())
-                                                .executes(context -> {
+
+                                        .then(ClientCommandManager.literal("deny")
+                                                .then(ClientCommandManager.argument(
+                                                        "name",
+                                                        StringArgumentType.word()
+                                                ).executes(context -> {
                                                     sendFriendAction(
                                                             "friend_deny",
-                                                            StringArgumentType.getString(context, "name")
+                                                            StringArgumentType.getString(
+                                                                    context, "name"
+                                                            )
                                                     );
                                                     return 1;
                                                 })))
-                                .then(ClientCommandManager.literal("list")
+
+                                        .then(ClientCommandManager.literal("list")
+                                                .executes(context -> {
+                                                    ClientState.send(
+                                                            ClientState.message("friend_list")
+                                                    );
+                                                    return 1;
+                                                }))
+
+                                        .then(ClientCommandManager.literal("help")
+                                                .executes(context -> {
+                                                    notifyText(
+                                                            "Команды: /friend add Ник | "
+                                                                    + "/friend list | "
+                                                                    + "/friend remove Ник | "
+                                                                    + "/friend accept Ник | "
+                                                                    + "/friend deny Ник"
+                                                    );
+                                                    return 1;
+                                                }))
+
                                         .executes(context -> {
-                                            ClientState.send(ClientState.message("friend_list"));
+                                            notifyText(
+                                                    "Используй /friend add/list/remove/"
+                                                            + "accept/deny/help."
+                                            );
                                             return 1;
-                                        }))
-                                .then(ClientCommandManager.literal("help")
-                                        .executes(context -> {
-                                            notifyText("Команды: .friend add Ник | .friend list | .friend remove Ник | .friend accept Ник | .friend deny Ник");
-                                            return 1;
-                                        }))
-                                .executes(context -> {
-                                    notifyText("Используй /friend add/list/remove/accept/deny/help.");
-                                    return 1;
-                                })
-                )
+                                        })
+                        )
         );
 
-        AttackEntityCallback.EVENT.register((player, world, hand, entity, hitResult) -> {
-            if (!world.isClient || !ClientConfig.INSTANCE.blockTeammateHits) {
-                return ActionResult.PASS;
-            }
+        // Блокировка ударов по друзьям.
+        AttackEntityCallback.EVENT.register(
+                (player, world, hand, entity, hitResult) -> {
+                    if (!world.isClient
+                            || !ClientConfig.INSTANCE.blockTeammateHits) {
+                        return ActionResult.PASS;
+                    }
 
-            if (entity instanceof PlayerEntity target
-                    && ClientState.isFriend(target.getUuid())) {
-                return ActionResult.FAIL;
-            }
+                    if (entity instanceof PlayerEntity target
+                            && ClientState.isFriend(target.getUuid())) {
+                        return ActionResult.FAIL;
+                    }
 
-            return ActionResult.PASS;
-        });
+                    return ActionResult.PASS;
+                }
+        );
 
         MarkerRenderer.register();
 
+        // Обработка горячих клавиш.
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
             boolean openPressed = false;
             boolean tempPressed = false;
@@ -200,16 +265,23 @@ public final class BuddyMarksClient implements ClientModInitializer {
         BuddyMarksMod.LOGGER.info("BuddyMarks client initialized");
     }
 
+    // Обработка команды .friend.
     private static void handleFriendCommand(String input) {
         String[] args = input.trim().split("\\s+");
 
         if (args.length == 1
-                || (args.length > 1 && args[1].equalsIgnoreCase("help"))) {
-            notifyText("Команды: .friend add Ник | .friend list | .friend remove Ник | .friend accept Ник | .friend deny Ник");
+                || (args.length > 1
+                && args[1].equalsIgnoreCase("help"))) {
+            notifyText(
+                    "Команды: .friend add Ник | .friend list | "
+                            + ".friend remove Ник | .friend accept Ник | "
+                            + ".friend deny Ник"
+            );
             return;
         }
 
-        if (args.length == 2 && args[1].equalsIgnoreCase("list")) {
+        if (args.length == 2
+                && args[1].equalsIgnoreCase("list")) {
             ClientState.send(ClientState.message("friend_list"));
             return;
         }
@@ -219,27 +291,49 @@ public final class BuddyMarksClient implements ClientModInitializer {
             return;
         }
 
-        String action = args[1].toLowerCase(java.util.Locale.ROOT);
+        String action = args[1].toLowerCase(
+                java.util.Locale.ROOT
+        );
+
         String name = args[2];
 
         switch (action) {
-            case "add" -> sendFriendAction("friend_add", name);
-            case "remove" -> sendFriendAction("friend_remove", name);
-            case "accept" -> sendFriendAction("friend_accept", name);
-            case "deny" -> sendFriendAction("friend_deny", name);
-            default -> notifyText("Неизвестное действие. Используй .friend help");
+            case "add" ->
+                    sendFriendAction("friend_add", name);
+
+            case "remove" ->
+                    sendFriendAction("friend_remove", name);
+
+            case "accept" ->
+                    sendFriendAction("friend_accept", name);
+
+            case "deny" ->
+                    sendFriendAction("friend_deny", name);
+
+            default ->
+                    notifyText(
+                            "Неизвестное действие. Используй .friend help"
+                    );
         }
     }
 
-    private static void sendFriendAction(String type, String name) {
+    // Отправка действия с другом.
+    private static void sendFriendAction(
+            String type,
+            String name
+    ) {
         JsonObject request = ClientState.message(type);
         request.addProperty("name", name);
         ClientState.send(request);
     }
 
-    public static Vec3d markerPositionFromLook(MinecraftClient client) {
+    // Определение позиции, на которую направлен взгляд.
+    public static Vec3d markerPositionFromLook(
+            MinecraftClient client
+    ) {
         if (client.crosshairTarget instanceof BlockHitResult hit
-                && client.crosshairTarget.getType() == HitResult.Type.BLOCK) {
+                && client.crosshairTarget.getType()
+                == HitResult.Type.BLOCK) {
             return Vec3d.ofCenter(hit.getBlockPos());
         }
 
@@ -251,22 +345,42 @@ public final class BuddyMarksClient implements ClientModInitializer {
 
         return Vec3d.ZERO;
     }
-    private static void createTemporaryMarker(MinecraftClient client) {
+
+    // Создание временной метки.
+    private static void createTemporaryMarker(
+            MinecraftClient client
+    ) {
         if (client.player == null) {
             return;
         }
 
         Vec3d position = markerPositionFromLook(client);
+
         JsonObject request = ClientState.message("marker_temp");
+
         request.addProperty("x", position.x);
         request.addProperty("y", position.y);
         request.addProperty("z", position.z);
-        request.addProperty("duration", ClientConfig.INSTANCE.temporaryMarkerSeconds);
-        request.addProperty("color", ClientConfig.INSTANCE.temporaryMarkerColor);
-        request.addProperty("size", ClientConfig.INSTANCE.markerSize);
+
+        request.addProperty(
+                "duration",
+                ClientConfig.INSTANCE.temporaryMarkerSeconds
+        );
+
+        request.addProperty(
+                "color",
+                ClientConfig.INSTANCE.temporaryMarkerColor
+        );
+
+        request.addProperty(
+                "size",
+                ClientConfig.INSTANCE.markerSize
+        );
 
         ClientState.send(request);
     }
+
+    // Вывод сообщения игроку.
     public static void notifyText(String text) {
         MinecraftClient client = MinecraftClient.getInstance();
 
