@@ -1,15 +1,13 @@
-name: Build BuddyMarks
+name: Build BuddyMarks (Minecraft 1.21.4)
 
 on:
   push:
-    branches:
-      - main
-      - master
+  pull_request:
   workflow_dispatch:
 
 permissions:
   contents: read
- 
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -23,16 +21,35 @@ jobs:
         with:
           distribution: temurin
           java-version: '21'
+          cache: gradle
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.12.1'
+
+      - name: Verify Gradle
+        run: gradle --version
 
       - name: Build BuddyMarks
-        run: |
-          chmod +x gradlew
-          ./gradlew --no-daemon clean build
+        run: gradle --no-daemon clean build --stacktrace
 
-      - name: Upload JAR
+      - name: List generated JAR files
+        if: always()
+        run: |
+          echo "Checking build/libs..."
+          if [ -d build/libs ]; then
+            ls -lah build/libs
+          else
+            echo "The build/libs directory does not exist."
+          fi
+
+      - name: Upload mod JAR
+        if: success()
         uses: actions/upload-artifact@v4
         with:
-          name: BuddyMarks-JAR
-          path: build/libs/*.jar
+          name: BuddyMarks-Minecraft-1.21.4
+          path: |
+            build/libs/*.jar
+            !build/libs/*-sources.jar
           if-no-files-found: error
-          retention-days: 14
