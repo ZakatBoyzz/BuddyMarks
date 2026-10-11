@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 1,
+  "id": "buddymarks",
+  "version": "${version}",
+  "name": "BuddyMarks",
+  "description": "Friend management, shared map markers and client-side teammate visuals for Fabric 1.21.4.",
+  "authors": ["BuddyMarks Team"],
+  "contact": {},
+  "license": "MIT",
+  "environment": "*",
+  "entrypoints": {
+    "main": ["com.buddymarks.BuddyMarksMod"],
+    "client": ["com.buddymarks.client.BuddyMarksClient"]
+  },
+  "mixins": ["buddymarks.mixins.json"],
+  "depends": {
+    "fabricloader": ">=0.16.10",
+    "minecraft": "~1.21.4",
+    "java": ">=21",
+    "fabric-api": "*"
+  }
+}
