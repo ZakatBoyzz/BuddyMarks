@@ -281,9 +281,6 @@ public final class BuddyMarksClient implements ClientModInitializer {
         if (client.player != null) {
             client.player.sendMessage(
                     Text.literal("[BuddyMarks] " + text),
-                    false
-            );
-        }
+                    false        }
     }
 }
-```
