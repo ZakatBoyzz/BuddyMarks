@@ -1,3 +1,4 @@
+```java
 package com.buddymarks.client;
 
 import com.buddymarks.BuddyMarksMod;
@@ -95,7 +96,8 @@ public final class BuddyMarksClient implements ClientModInitializer {
             handleFriendCommand(trimmed);
             return false;
         });
-      ClientCommandRegistrationCallback.EVENT.register((dispatcher, registryAccess) ->
+
+        ClientCommandRegistrationCallback.EVENT.register((dispatcher, registryAccess) ->
                 dispatcher.register(
                         ClientCommandManager.literal("friend")
                                 .then(ClientCommandManager.literal("add")
@@ -150,7 +152,8 @@ public final class BuddyMarksClient implements ClientModInitializer {
                                 })
                 )
         );
-      AttackEntityCallback.EVENT.register((player, world, hand, entity, hitResult) -> {
+
+        AttackEntityCallback.EVENT.register((player, world, hand, entity, hitResult) -> {
             if (!world.isClient || !ClientConfig.INSTANCE.blockTeammateHits) {
                 return ActionResult.PASS;
             }
@@ -271,7 +274,8 @@ public final class BuddyMarksClient implements ClientModInitializer {
 
         return client.player.getPos();
     }
-  public static void notifyText(String text) {
+
+    public static void notifyText(String text) {
         MinecraftClient client = MinecraftClient.getInstance();
 
         if (client.player != null) {
@@ -281,3 +285,5 @@ public final class BuddyMarksClient implements ClientModInitializer {
             );
         }
     }
+}
+```
